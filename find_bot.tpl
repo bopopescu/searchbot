@@ -40,6 +40,10 @@
 		padding-left:0;
 		text-align:left;
 	}
+
+	h2[id=loggedIn] {
+		margin-left: 10%;
+	}
 	table {
     	border-collapse: collapse;
     	width: 62%;
@@ -71,9 +75,25 @@
         filter: FlipH;
         -ms-filter: "FlipH";
 	}
+	a[id="login"], a[id="logout"] {
+		float:right;
+		padding-right:8%;
+		padding-top:15px;
+		color: #EC7F1D; 
+		font-size:20px;
+		font-weight: normal;
+	}
 	</style>
 </head>
 <body>
+<div id="menuPanel">
+	%if(loggedIn):
+	  <h2 id="loggedIn">Welcome to SearchBot, {{email}}</h2>
+	  <a href="/logout" id="logout">Logout</a>
+	%else:
+	  <a href="/login" id="login">Login</a>
+	%end
+</div>
 <br>
 <div id="header" style="float:top;">
 <h1 id="myH1" style="display: inline; top:10;"><img src="images/colorbird.svg" alt="logo" style="display: inline;"/>SearchBot</h1>
@@ -85,20 +105,21 @@
   </div>
 </form>
 {{!base}}
-
-%if len(history) > 0:
-	<h2>Common Searches:</h2>
-	<table id="history">
+%if(loggedIn):
+	%if len(history) > 0:
+		<h2>Common Searches:</h2>
+		<table id="history">
+			<tr>
+				<th>Word</th>
+				<th>Count</th>
+			</tr>
+	%end
+	%for key, value in history.most_common(20):
 		<tr>
-			<th>Word</th>
-			<th>Count</th>
+			<td>{{key}}</td>
+			<td>{{value}}</td>
 		</tr>
-%end
-%for key, value in history.most_common(20):
-	<tr>
-		<td>{{key}}</td>
-		<td>{{value}}</td>
-	</tr>
+	%end
 %end
 </table>
 </body>
