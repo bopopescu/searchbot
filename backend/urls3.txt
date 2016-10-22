@@ -1,0 +1,4 @@
+http://www.google.com
+http://www.bing.com
+http://www.yahoo.com
+http://www.en.wikipedia.org/wiki/Special:Random
