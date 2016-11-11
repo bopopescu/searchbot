@@ -25,6 +25,13 @@ from BeautifulSoup import *
 from collections import defaultdict
 import re
 
+# LAB 3
+# to calculate the page ranks using the reference algorithm
+from pagerank import page_rank
+# for persistent storage
+import anydbm
+import pickle
+
 def attr(elem, attr):
     """An html attribute from an html element. E.g. <a href="">, then
     attr(elem, "href") will get the href or an empty string."""
@@ -56,6 +63,8 @@ class crawler(object):
         self._resolved_inv_index = { }
         self._doc_index = { }
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # LAB 3 initialize list of links
+        self._set_of_links = set()
 
 
         # functions to call when entering and exiting specific tags
@@ -188,7 +197,12 @@ class crawler(object):
     def add_link(self, from_doc_id, to_doc_id):
         """Add a link into the database, or increase the number of links between
         two pages in the database."""
-        # TODO
+        # TODO insert (from, to) tuple into the list of links
+        
+        # Lab 3 saving links
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        self._set_of_links.add((from_doc_id, to_doc_id))
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def _visit_title(self, elem):
         """Called when visiting the <title> tag."""
@@ -355,7 +369,6 @@ class crawler(object):
 
     # LAB 1 functions to pupulate and return the inverted/resolved indexes
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
     def get_inverted_index(self):
 		"""Returns a dict() which maps words ids (key) to a list of document ids.
 		The list of document ids is stored as a set() data structure. """
@@ -386,8 +399,8 @@ class crawler(object):
 
     def get_lexicon(self):
     	"""Returns a list of all the words encountered during crawl."""
-    	return [wordkeys for wordkeys in self._word_id_cache]
-
+    	#return [wordkeys for wordkeys in self._word_id_cache]
+    	return self._word_id_cache
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # end of LAB 1 functions
 
@@ -413,22 +426,97 @@ class crawler(object):
     def get_word_cache(self):
         """Caches url to doc_id."""
         return self._word_id_cache
+    
+    def get_list_of_links(self):
+        """Return the list of link tuples"""
+        return list(self._set_of_links)
+    
+    def get_document_index_dict(self):
+        return self._doc_index
 
 
 if __name__ == "__main__":
     bot = crawler(None, "urls.txt")
-    bot.crawl(depth=0)
+    bot.crawl(depth=1)
     # Setting ^^^^^ will determine how far to recurse into each new url hyperlink
     # that the crawler encounters. We use 0 to just get the first web page per url.
     
+    # LAB 1
     # Testing of the inverted and resolved indexes
     # just print out their values
-    document_index = bot.get_document_index()
-    print "\nDocument Index\n~~~~~~~~~~~~~~\n", document_index
+    #document_index = bot.get_document_index()
+    document_index = bot.get_document_index_dict()
+    #print "\nDocument Index\n~~~~~~~~~~~~~~\n", document_index
     lexicon = bot.get_lexicon()
-    print "\nLexicon\n~~~~~~~\n", lexicon
+    #print "\nLexicon\n~~~~~~~\n", lexicon
     inverted_index = bot.get_inverted_index()
-    print "\nInverted Index\n~~~~~~~~~~~~~~\n", inverted_index
+    #print "\nInverted Index\n~~~~~~~~~~~~~~\n", inverted_index
     resolved_inverted_index = bot.get_resolved_inverted_index()
-    print "\nResolved Index\n~~~~~~~~~~~~~~\n", resolved_inverted_index
+    #print "\nResolved Index\n~~~~~~~~~~~~~~\n", resolved_inverted_index
+    
+    
+    # LAB 3 code
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    pagerank_dict = page_rank(bot.get_list_of_links(), num_iterations=20)
+    
+    # make an upgraded resolved_inverted_index
+    # maps word strings to ordered list of tuples
+    # tuples = (url string, page title, page rank score)
+    word_to_sorted_list_of_urls = { }
+    for word, url_set in resolved_inverted_index.items():
+        # combine each url with its page rank into a tuple
+        # sort that list of tuples by page rank
+        # store new sorted list of url tuples into new data structure
+        newlist = []
+        for a_url in url_set:
+            a_url_id = bot.document_id(a_url)
+            a_url_rank = pagerank_dict[a_url_id]
+            a_url_title = document_index[a_url_id][0]
+            newlist.append((a_url, a_url_title, a_url_rank))
+        # sort list by the pagerank (second element in tuple)
+        newlist.sort(key=lambda tup: tup[2], reverse=True)
+        # insert into new dict
+        word_to_sorted_list_of_urls[word] = newlist
+    
+    # persistently store our own data structure
+    our_special_db = anydbm.open('searchbot_data.db', 'c')
+    for word, url_list in word_to_sorted_list_of_urls.items():
+        our_special_db[str(word)] = pickle.dumps(url_list)
+        # word is originally in unicode, need to convert to string
+    our_special_db.close()
+    
+    
+    # Persistent Storage of Required Data
+    # ie. inverted index, lexicon, document index, PageRank scores
+    # store in persistent storage (anydbm)
+    
+    # document index (maps doc_ids to doc title)
+    doc_index_db = anydbm.open('searchbot_doc_index.db', 'c')
+    for web_id in document_index:
+        doc_index_db[str(web_id)] = pickle.dumps(document_index[web_id])
+        # word is originally integer, need to convert to string
+    doc_index_db.close()
+    
+    # lexicon (maps words to word_ids)
+    lexicon_db = anydbm.open('searchbot_lexicon.db', 'c')
+    for keyword in lexicon:
+        lexicon_db[str(keyword)] = pickle.dumps(lexicon[keyword])
+        # word is originally in unicode, need to convert to string
+    lexicon_db.close()
+    
+    # inverted index (maps word_ids to set of url_ids)
+    inv_index_db = anydbm.open('searchbot_inv_index.db', 'c')
+    for word_id in inverted_index:
+        inv_index_db[str(word_id)] = pickle.dumps(inverted_index[word_id])
+        # word is originally integer, need to convert to string
+    inv_index_db.close()
+    
+    # PageRank scores (maps word_ids to score values)
+    pagerank_db = anydbm.open('searchbot_pagerank.db', 'c')
+    for web_id in pagerank_dict:
+        pagerank_db[str(web_id)] = pickle.dumps(pagerank_dict[web_id])
+        # word is originally integer, need to convert to string
+    pagerank_db.close()
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
