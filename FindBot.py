@@ -1,4 +1,4 @@
-from bottle import route, run, template, request, static_file, redirect
+from bottle import route, run, template, request, static_file, redirect, error
 import collections
 from oauth2client.client import OAuth2WebServerFlow
 from oauth2client.client import flow_from_clientsecrets
@@ -7,11 +7,12 @@ from googleapiclient.discovery import build
 import httplib2
 import beaker.middleware
 import bottle
+import anydbm
+import pickle
 #the history counter is used throughout the session to store all the words that 
 #have been searched for and how many times. The top 20 will be displayed
 userHist = {}
-email = ""
-loggedIn = False
+db = anydbm.open('searchbot_data.db', 'r')
 session_opts = {
     'session.type': 'file',
     'session.data_dir': './session/',
@@ -22,20 +23,16 @@ app = beaker.middleware.SessionMiddleware(bottle.app(), session_opts)
 def display_search():
 	session = bottle.request.environ.get('beaker.session')
 	displayHist = collections.Counter()
-	global email
-	global loggedIn
+	loggedIn = False
+	email = ""
 	global userHist
-	if 'logged_on' in session:
-		loggedIn = session['logged_on']
-	if loggedIn:
-		if 'email' in session:
-			email = session['email']
-			if email in userHist:
-				displayHist = userHist[email]
-			else:
-				userHist[email] = collections.Counter()
+	if 'email' in session:
+		email = session['email']
+		loggedIn = True
+		if email in userHist:
+			displayHist = userHist[email]
 		else:
-			return template('already_logged.tpl')
+			userHist[email] = collections.Counter()
 	#the template shows the main search bar and a history table if there is any
 	return template('find_bot.tpl', base="", history=displayHist, loggedIn=loggedIn, email=email)
 
@@ -46,14 +43,24 @@ def home():
 	redirect(str(uri))
 
 #when the form is submitted the POST method will be called
-@route('/', method ='POST')
+@route('/search', method ='GET')
 def do_search():
 	#this is the search phrase the user has entered, it is split into
 	#a list of separate words and then each word is counted using dictionary
 	#counter from collections package
+	loggedIn = False
 	global userHist
-	phrase = request.forms.get('keywords')
+	num_displayed = 4
+	email = ""
+	session = bottle.request.environ.get('beaker.session')
+	if 'email' in session:
+		email = session['email']
+		loggedIn = True
+	phrase = request.query['keywords']
+	query = "keywords=" + phrase
 	words = phrase.split()
+	if len(words) > 0:
+		first_word = words[0]
 	count = collections.Counter()
 	displayHist = collections.Counter()
 	for word in words:
@@ -61,9 +68,22 @@ def do_search():
 		if loggedIn:
 			userHist[email][word] += 1
 			displayHist = userHist[email]
-	#the search.tpl will insert a table into the existing html displaying the 
-	#keywords and counting the appearances of each word.
-	return template('search.tpl', phrase=phrase, counter=count, history=displayHist, num_words=len(words), loggedIn=loggedIn, email=email)
+	num_pages = 0
+	urls = []
+	from_url = int(request.query['from_url']) if 'from_url' in request.query else 0
+	if first_word in db:
+		urlstring = db[first_word]
+		urls_tup = pickle.loads(urlstring)
+		url_links = [i[0] for i in urls_tup]
+		titles = [i[1] for i in urls_tup]
+		urls = zip(url_links, titles)
+    	#TODO: need to unpickle into list of tuples
+    	num_pages = len(urls) / num_displayed
+    	if (len(urls) % num_displayed != 0):
+    		num_pages += 1
+	#the search_results.tpl will insert a table into the existing html displaying the 
+	#URLs for the searched word in order of pagerank.
+	return template('search_results.tpl', num_displayed=num_displayed, query=query, from_url=from_url, num_pages=num_pages, word=first_word, urls=urls[from_url:from_url + num_displayed],loggedIn=loggedIn, email=email)
 
 @route('/images/:filename#.*#')
 def send_static(filename):
@@ -86,13 +106,19 @@ def redirect_page():
 	user_document = users_service.userinfo().get().execute()
 	user_email = user_document['email']
 	session = bottle.request.environ.get('beaker.session')
-	session['logged_on'] = True
 	session['email'] = user_email
+	session.save()
 	redirect('/')
 @route('/logout')
 def logout():
 	session = bottle.request.environ.get('beaker.session')
-
-	session['logged_on'] = False
+	session.delete()
 	redirect('/')
+@error(404)
+def error404(error):
+    return """
+        <h2> Sorry the page you are trying to access does not exist!
+             Click to <a href="/">return to SearchBot</a>
+        </h2>
+    """
 run(host='localhost', port=8080, debug=True, app=app)
