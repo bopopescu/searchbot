@@ -9,9 +9,11 @@ import beaker.middleware
 import bottle
 import anydbm
 import pickle
-#the history counter is used throughout the session to store all the words that 
-#have been searched for and how many times. The top 20 will be displayed
+import calculator
+
+#was used to display history per user
 userHist = {}
+#the database containing a mapping between words and which urls they match to
 db = anydbm.open('searchbot_data.db', 'r')
 session_opts = {
     'session.type': 'file',
@@ -26,6 +28,7 @@ def display_search():
 	loggedIn = False
 	email = ""
 	global userHist
+	#if the user has logged on, get their search history or create it
 	if 'email' in session:
 		email = session['email']
 		loggedIn = True
@@ -33,7 +36,7 @@ def display_search():
 			displayHist = userHist[email]
 		else:
 			userHist[email] = collections.Counter()
-	#the template shows the main search bar and a history table if there is any
+	#this template shows the main search bar and a history table if there is any
 	return template('find_bot.tpl', base="", history=displayHist, loggedIn=loggedIn, email=email)
 
 @route('/login')
@@ -42,7 +45,6 @@ def home():
 	uri = flow.step1_get_authorize_url()
 	redirect(str(uri))
 
-#when the form is submitted the POST method will be called
 @route('/search', method ='GET')
 def do_search():
 	#this is the search phrase the user has entered, it is split into
@@ -50,45 +52,65 @@ def do_search():
 	#counter from collections package
 	loggedIn = False
 	global userHist
-	num_displayed = 4
+	num_displayed = 5
 	email = ""
 	session = bottle.request.environ.get('beaker.session')
 	if 'email' in session:
 		email = session['email']
 		loggedIn = True
+
+	#get the search phrase and split it up into words, initialise counters	
 	phrase = request.query['keywords']
 	query = "keywords=" + phrase
+	#use the calculator class to determine whether the search phrase can be evaluated or not
+	calc = calculator.Calculator(phrase)
+	value = calc.evaluate()
 	words = phrase.split()
-	if len(words) > 0:
-		first_word = words[0]
 	count = collections.Counter()
 	displayHist = collections.Counter()
+	num_pages = 0
+	urls = []
+	#use this to display the correct amount of urls per page
+	from_url = int(request.query['from_url']) if 'from_url' in request.query else 0
 	for word in words:
+		#for the user history - no longer displaying this for labs 3/4 but functionality still in place
 		count[word] += 1
 		if loggedIn:
 			userHist[email][word] += 1
 			displayHist = userHist[email]
-	num_pages = 0
-	urls = []
-	from_url = int(request.query['from_url']) if 'from_url' in request.query else 0
-	if first_word in db:
-		urlstring = db[first_word]
-		urls_tup = pickle.loads(urlstring)
-		url_links = [i[0] for i in urls_tup]
-		titles = [i[1] for i in urls_tup]
-		urls = zip(url_links, titles)
-    	#TODO: need to unpickle into list of tuples
-    	num_pages = len(urls) / num_displayed
-    	if (len(urls) % num_displayed != 0):
-    		num_pages += 1
+		#If the word is in the database, add the urls for that word to the list of urls to be displayed
+		if word in db:
+			urlstring = db[word]
+			new_urls = pickle.loads(urlstring)
+			for url in new_urls:
+				#if the url is not already in the list to be displayed, add it to the list
+				if url[0] not in [i[0] for i in urls]:
+					urls.append(url)
+				#if the url is already in the list that means it is relevant for more than one word in the search phrase.
+				#In this case we add the pagerank of the url to the pagerank of the existing url, giving it higher priority
+				#as it is now relevant for more than one of the search words
+				else:
+					links = [i[0] for i in urls]
+					titles = [i[1] for i in urls]
+					ranks = [i[2] for i in urls]
+					index = links.index(url[0])
+					ranks[index] += url[2]
+					urls = zip(links, titles, ranks)
+	#sort using the rank in tuple
+	urls.sort(key=lambda x: x[2])
+	urls.reverse()
+	num_pages = len(urls) / num_displayed
+	if (len(urls) % num_displayed != 0):
+		num_pages += 1
 	#the search_results.tpl will insert a table into the existing html displaying the 
-	#URLs for the searched word in order of pagerank.
-	return template('search_results.tpl', num_displayed=num_displayed, query=query, from_url=from_url, num_pages=num_pages, word=first_word, urls=urls[from_url:from_url + num_displayed],loggedIn=loggedIn, email=email)
+	#URLs for the searched words in order of pagerank.
+	return template('search_results.tpl', num_displayed=num_displayed, query=query, from_url=from_url, num_pages=num_pages, word=phrase, urls=urls[from_url:from_url + num_displayed],loggedIn=loggedIn, email=email, val=value)
 
 @route('/images/:filename#.*#')
 def send_static(filename):
     return static_file(filename, root='./images/')
 
+#user authentication
 @route('/redirect')
 def redirect_page():
 	CLIENT_ID = '248892728445-8nott1p07jt3bvnqhlouj7gjbif5cu66.apps.googleusercontent.com'

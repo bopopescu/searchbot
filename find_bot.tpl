@@ -117,6 +117,7 @@
 	  <h2 id="loggedIn">Welcome to SearchBot, {{email}}</h2>
 	  <a href="/logout" id="logout">Logout</a>
 	%else:
+	<!-- for the scripted version we wont be doing authentication so just comment this out -->
 	  <a href="/login" id="login">Login</a>
 	%end
 </div>
