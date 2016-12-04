@@ -1,0 +1,138 @@
+LAB 3 -> sudo helloworld foo bar (no search results exist in database)
+--------------------------------
+
+ubuntu@ip-172-31-0-54:~$ ab -n 200 -c 200 http://localhost:80/?keywords=sudo+helloworld+foo+bar
+...
+Concurrency Level:      200
+Time taken for tests:   0.998 seconds
+Complete requests:      200
+Failed requests:        0
+Total transferred:      533200 bytes
+HTML transferred:       487600 bytes
+Requests per second:    200.43 [#/sec] (mean)
+Time per request:       997.874 [ms] (mean)
+Time per request:       4.989 [ms] (mean, across all concurrent requests)
+Transfer rate:          521.81 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    1   2.3      0      11
+Processing:     3   28  73.7     19     986
+Waiting:        0   28  73.7     18     985
+Total:         12   29  73.8     19     986
+
+Percentage of the requests served within a certain time (ms)
+  50%     19
+  66%     19
+  75%     20
+  80%     20
+  90%     28
+  95%     38
+  98%    223
+  99%    235
+ 100%    986 (longest request)
+
+
+LAB 2 -> sudo helloworld foo bar
+--------------------------------
+
+Concurrency Level:      200
+Time taken for tests:   0.834 seconds
+Complete requests:      200
+Failed requests:        0
+Total transferred:      477000 bytes
+HTML transferred:       431400 bytes
+Requests per second:    239.79 [#/sec] (mean)
+Time per request:       834.070 [ms] (mean)
+Time per request:       4.170 [ms] (mean, across all concurrent requests)
+Transfer rate:          558.49 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    1   2.1      0      10
+Processing:     3   28  44.7     20     434
+Waiting:        0   27  44.7     19     433
+Total:         14   28  45.3     20     444
+
+Percentage of the requests served within a certain time (ms)
+  50%     20
+  66%     20
+  75%     20
+  80%     21
+  90%     21
+  95%     24
+  98%    223
+  99%    237
+ 100%    444 (longest request)
+
+
+LAB 3 -> toronto (returns 11 search results)
+----------------
+
+ubuntu@ip-172-31-0-54:~$ ab -n 500 -c 100 http://localhost:80/?keywords=toronto
+...
+Concurrency Level:      100
+Time taken for tests:   41.351 seconds
+Complete requests:      500
+Failed requests:        1
+   (Connect: 0, Receive: 0, Length: 1, Exceptions: 0)
+Total transferred:      1330334 bytes
+HTML transferred:       1216562 bytes
+Requests per second:    12.09 [#/sec] (mean)
+Time per request:       8270.120 [ms] (mean)
+Time per request:       82.701 [ms] (mean, across all concurrent requests)
+Transfer rate:          31.42 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0   26 366.1      0    7014
+Processing:    16  290 2446.9     17   41346
+Waiting:       15  226 1988.4     16   41346
+Total:         16  316 2507.3     17   41350
+
+Percentage of the requests served within a certain time (ms)
+  50%     17
+  66%     17
+  75%     17
+  80%     17
+  90%     18
+  95%    204
+  98%   5524
+  99%   8513
+ 100%  41350 (longest request)
+
+
+LAB 2 -> toronto
+----------------
+
+ubuntu@ip-172-31-0-54:~$ ab -n 500 -c 100 http://localhost:80/?keywords=toronto
+...
+Concurrency Level:      100
+Time taken for tests:   6.668 seconds
+Complete requests:      500
+Failed requests:        0
+Total transferred:      1192500 bytes
+HTML transferred:       1078500 bytes
+Requests per second:    74.98 [#/sec] (mean)
+Time per request:       1333.686 [ms] (mean)
+Time per request:       13.337 [ms] (mean, across all concurrent requests)
+Transfer rate:          174.64 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0   14 194.6      0    3000
+Processing:     9   81 532.1     19    6664
+Waiting:        9   80 532.1     18    6664
+Total:         10   95 593.9     19    6668
+
+Percentage of the requests served within a certain time (ms)
+  50%     19
+  66%     19
+  75%     20
+  80%     20
+  90%     20
+  95%     20
+  98%    332
+  99%   3840
+ 100%   6668 (longest request)
+

@@ -1,0 +1,82 @@
+Group-019 readme file
+
+public IP of live web server:
+52.23.157.195
+public DNS name:
+http://ec2-52-23-157-195.compute-1.amazonaws.com/
+
+Test Case Setup (new in lab 3):
+- Input url test-set is provided in 'urls.txt'
+- Build the database by crawling the urls via command 'python crawler.py'
+- To verify creation of database (.db) files, run command 'python db_test.py'
+- (P.S. view the 'dbtest_sample_output' file for expected results)
+
+Benchmark Setup (similar to lab2):
+- we run the SearchBot.py on one ssh connection to the server
+- open up a second ssh connection to server and run dstat for real time monitoring
+- create second ubuntu instance from which to generate traffic to test SearchBot
+- in the second ubuntu instance run apache benchmark command (ab -n <#> -c <#> <request>)
+- vary the parameters for -n and -c to find the maximum performance
+- observe the other ssh connections for more detailed analyses of cpu, i/o, etc.
+- (P.S. make sure the number of requests is greater than or equal to the number of connections or comamnd will fail).
+
+
+-> we compare the benchmarking results when testing SearchBot.py (form lab3) and
+   the older implementation FindBot.py (from lab2)
+-> Analysis of results are below and the actual results are in the 'RESULTS' file
+
+
+
+RESULTS:
+
+########################################
+
+
+Command: ab -n 200 -c 200 http://localhost:80/?keywords=sudo+helloworld+foo+bar
+
+lab2 results:
+-------------
+Transfer rate:          558.49 [Kbytes/sec] received
+Time per request (mean):       4.170 [ms] (mean, across all concurrent requests)
+Time per request  99%    237 [ms]
+
+
+lab3 results:
+-------------
+Transfer rate:          521.81 [Kbytes/sec] received
+Time per request (mean):       4.989 [ms] (mean, across all concurrent requests)
+Time per request  99%    235 [ms]
+
+
+
+Analysis 1:
+------------------
+There is a negligible difference in the results between both labs, because even though lab3 tries to gather results, there are none generated for this specific query, therefore there are no disk accesses which means a negligible difference in speed.
+
+
+
+#########################################
+
+
+Command: ab -n 500 -c 100 http://localhost:80/?keywords=toronto
+
+lab2 results:
+-------------
+Transfer rate:          174.64 [Kbytes/sec] received
+Time per request (mean):       13.337 [ms] (mean, across all concurrent requests)
+Time per request  99%    3840 [ms]
+
+
+lab3 results:
+-------------
+Transfer rate:          31.42 [Kbytes/sec] received
+Time per request (mean):       82.701 [ms] (mean, across all concurrent requests)
+Time per request   99%   8513 [ms]
+
+
+
+Analysis 2:
+------------------
+There is a distinct difference in the results between both labs for this query specifically, because results are generated in lab3 and thus disk accesses are done (to the database) which reduces overall throughput.
+
+
