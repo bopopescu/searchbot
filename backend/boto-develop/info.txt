@@ -1,3 +1,0 @@
-i-0bef4b33251553f7d
-54.210.223.39
-ec2-54-210-223-39.compute-1.amazonaws.com
