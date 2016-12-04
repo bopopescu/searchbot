@@ -1,0 +1,4 @@
+http://www.google.ca
+http://www.google.com
+http://www.google.ru
+http://www.google.ba
