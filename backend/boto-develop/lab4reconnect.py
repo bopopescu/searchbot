@@ -1,15 +1,14 @@
 # Python Browser Lab 4
 # Group g326-1-019 [Gwyneth, David, Gligor]
-# Last modified December 3, 2016
+# Last modified December 4, 2016
 
 ### TO RUN: ###
-# need to have proper credential file as 'credentials.csv'
-# like the one provided by AWS for a set up user
-# user with these credentials must have admin privileges (to install packages)
-# add permissions (Administrator) via AWS website > IAM > user > user_name
+# Must have proper credential file as 'credentials.csv' provided by AWS for a set up user
+# User needs to have admin privileges (to install packages)
+# Add permissions (Administrator) via AWS website > IAM > user > 'user_name'
 #
-# IP addr will be written in info.txt
-###
+# instance-ID, IP addr, DNS nme will be written in info-g019.txt
+### ###
 try:
 	import boto.ec2
 	import string, random
@@ -37,7 +36,7 @@ for i in range(0,len(sep_keys)):
 keyfile.close()
 
 # read instance ID from file
-infotxt = open('info.txt', 'r')
+infotxt = open('info-g019.txt', 'r')
 insta_id = infotxt.readline().strip()
 infotxt.close()
 
@@ -46,21 +45,24 @@ infotxt.close()
 conn = boto.ec2.connect_to_region("us-east-1", aws_access_key_id=sep_keys[1], aws_secret_access_key=sep_keys[2])
 # get all the instances, the one we just created should be the first one
 if insta_id:
-	reservations = conn.get_all_reservations([insta_id])
+	reservations = conn.get_all_reservations([insta_id]) # get instance we just created
 else:
 	reservations = conn.get_all_reservations()
 insta = reservations[0].instances[0]
 
 # wait for instance to boot and stabilize
 print "instance is", insta.state
-while insta.state != "running" or insta.ip_address == None or insta.public_dns_name == None:
+for i in range(30):
+	if insta.state == "running" and insta.ip_address != None and insta.public_dns_name != None:
+		break
 	print "waiting for instance to finish booting..."
 	time.sleep(10)
 print "instance booted!", insta.state, "!"
 
 
-# save the IP address & DNS name to info file
-infotxt = open('info.txt', 'w')
+# save the insta-ID, IP address, and DNS name to info-g019 file
+print "Writing to info-g019.txt"
+infotxt = open('info-g019.txt', 'w')
 infotxt.write(insta.id + '\n')
 infotxt.write(insta.ip_address + '\n')
 infotxt.write(insta.public_dns_name + '\n')
@@ -74,74 +76,40 @@ print "public DNS is:", insta.public_dns_name
 # SCP to transfer files to instance
 # SSH to install the necessary packages and launch SearchBot
 # do the ssh stuff
-print "\nSearchBot INSTALLATION: (this may take a while)\n"
+#using subprocess.call(ssh [user]@[server] [command; command 'args'])
+# ex: ssh blah_server "ls some_folder; ./someaction.sh 'some params'; pwd; ./some_other_action 'other params';"
+
+print "\nSearchBot library INSTALLATION: (this may take a while)"
 keypem = insta.key_name + '.pem'
 filepath = os.path.abspath('frontend.tar.gz') # tar file containing all required files
 hostname = "ubuntu@" + str(insta.ip_address)
 
-print "transferring front-end files"
+print "\ntransferring front-end files"
 subprocess.call(['scp', '-o', 'StrictHostKeyChecking=no', '-i', keypem, filepath, hostname + ':~/' ])
 
-subprocess.call(['ssh', '-i', keypem, '-t', '-t', hostname, "'ls'"])
-subprocess.call(["ls"])
+print "\nconnecting to", hostname
+subprocess.call(['ssh', '-i', keypem, hostname, 'whoami; pwd'])
 
-#using subprocess.call(ssh [user]@[server] '[command]')
-# tar -zxvf frontend.tar.gz
-# cd frontend
-# bash lab4_remote_lib_installer.sh
-exit()
+print "\nunpacking front-end files"
+time.sleep(1)
+subprocess.call(['ssh', '-i', keypem, hostname, 'tar -zxvf frontend.tar.gz'])
 
-
-
-
-print "connecting to", hostname
-sshProcess = subprocess.Popen(['ssh', '-i', keypem, '-t', '-t', hostname], stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True, bufsize=-1)
-
-print "unpacking front-end files"
-sshProcess.stdin.write("tar -zxvf frontend.tar.gz \n")
-time.sleep(3)
-
-
-
-# DONE IN REMOTE BASH SCRIPT
-# print "installing dependent frameworks"
-# sshProcess.stdin.write("sudo apt-get --assume-yes update\n")
-# sshProcess.stdin.write("sudo apt-get --assume-yes install python-pip\n")
-# sshProcess.stdin.write("sudo apt-get --assume-yes install python-dev\n")
-
-# print "installing numpy"
-# sshProcess.stdin.write("sudo pip install numpy\n")
-
-# print "installing bottle"
-# sshProcess.stdin.write("sudo pip install bottle\n")
-
-# print "installing beaker"
-# sshProcess.stdin.write("sudo pip install beaker\n")
-
-# print "installing oauth2client"
-# sshProcess.stdin.write("sudo pip install oauth2client\n")
-
-# print "installing googleapiclient"
-# sshProcess.stdin.write("sudo pip install google-api-python-client\n")
-# DONE IN REMOTE BASH SCRIPT
-
+print "\ninstalling required libraries on remote machine"
+time.sleep(1)
+subprocess.call(['ssh', '-i', keypem, hostname, 'cd frontend; bash lab4_remote_lib_installer.sh'])
 
 # RUN SearchBot remote server
-print "running 'SearchBot.py' (in background)"
-#sshProcess = subprocess.Popen(['ssh', '-i', keypem, '-t', '-t', hostname], stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True, bufsize=-1)
-sshProcess.stdin.write("cd frontend\n")
+print "\nrunning 'SearchBot.py' (remotely)"
 time.sleep(1)
-sshProcess.stdin.write("tmux\n")
-time.sleep(1)
+sshProcess = subprocess.Popen(['ssh', '-i', keypem, '-t', '-t', hostname, 'cd frontend; tmux new -s Sbot'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True, bufsize=-1)
 sshProcess.stdin.write("sudo python SearchBot.py\n")
-time.sleep(2)
+time.sleep(1) # wait for things to stabilize
 sshProcess.stdin.write("^b\n")
 sshProcess.stdin.write("d\n")
-time.sleep(1)
+time.sleep(0.5) # wait for things to stabilize
 
 print "exiting ssh session"
 sshProcess.stdin.write("exit")
-sshProcess.stdin.close()
 
 print "\nstart_searchbot is COMPLETE\n"
 print "Instance", insta.id, "is", insta.state
