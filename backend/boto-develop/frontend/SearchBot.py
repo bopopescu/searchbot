@@ -41,7 +41,7 @@ def display_search():
 
 @route('/login')
 def home():
-	flow = flow_from_clientsecrets("client_secret_248892728445-8nott1p07jt3bvnqhlouj7gjbif5cu66.apps.googleusercontent.com.json", scope='https://www.googleapis.com/auth/plus.me https://www.googleapis.com/auth/userinfo.email', redirect_uri="http://localhost:8080/redirect")
+	flow = flow_from_clientsecrets("client_secret_248892728445-8nott1p07jt3bvnqhlouj7gjbif5cu66.apps.googleusercontent.com.json", scope='https://www.googleapis.com/auth/plus.me https://www.googleapis.com/auth/userinfo.email', redirect_uri="http://ec2-52-23-157-195.compute-1.amazonaws.com/redirect")
 	uri = flow.step1_get_authorize_url()
 	redirect(str(uri))
 
@@ -115,7 +115,7 @@ def send_static(filename):
 def redirect_page():
 	CLIENT_ID = '248892728445-8nott1p07jt3bvnqhlouj7gjbif5cu66.apps.googleusercontent.com'
 	CLIENT_SECRET = 'szDO0M_8Hww51N3hnsYu1Gk1'
-	REDIRECT_URI = 'http://localhost:8080/redirect'
+	REDIRECT_URI = 'http://ec2-52-23-157-195.compute-1.amazonaws.com/redirect'
 	SCOPE = 'https://www.googleapis.com/auth/drive.file'
 	code = request.query.get('code', '')
 	flow = OAuth2WebServerFlow(client_id=CLIENT_ID, client_secret=CLIENT_SECRET,scope=SCOPE,redirect_uri=REDIRECT_URI)
@@ -143,4 +143,6 @@ def error404(error):
              Click to <a href="/">return to SearchBot</a>
         </h2>
     """
-run(host='localhost', port=8080, debug=True, app=app)
+
+run(host='0.0.0.0', port=80, debug=True, app=app)
+
