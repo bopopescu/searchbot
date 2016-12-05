@@ -1,0 +1,66 @@
+Group-019 readme file Lab4
+[Gwyneth, David, Gligor]
+
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+
+SearchBot is currently running on an active server.
+public IP addr is: removed on public version
+public DNS name is: removed on public version
+
+CODE ORGANIZATION:
+- deployment/termination one-click scripts are in
+- other source code files are in backend/frontend
+- descriptions of folders and how to run files are below
+
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+
+*** Must have boto installed to use boto.ec2 and run the scripts ***
+
+DEPLOYMENT SCRIPT:
+= start_searchbot.sh
+1 - credentials must be specified in 'credentials.csv' inside same directory as script
+2 - script uses boto with boto.ec2, make sure it is installed for Python
+3 - click on 'start_searchbot.sh' and run in terminal to see output
+    this will run lab4launch.py and lab4reconnect.py
+    lab4launch creates the instance (along with unique keypair and secure group)
+    lab4reconnect will copy frontend file to remote machine, install packages via
+                  the lab4_remote_lib_installer.sh and run 'SearchBot.py' server
+4 - it will create random key-pair file name, ending with .pem
+5 - it creates file 'info-g019.txt' with instance-ID, IP, and DNS address
+6 - Note: installation of packages/libraries on remote machine takes time!
+
+(*public IP and public DNS name will be in 'info-g019.txt' after deployment*)
+
+TERMINATION SCRIPT:
+= stop_searchbot.sh
+1 - credentials must be specified in credentials.csv in same directory as script
+2 - specify instance-id on first line of 'info-g019.txt'
+    no need to enter it in the command window
+3 - click on stop_searchbot.sh and run in terminal to see output
+4 - it will clean up the virtual AWS objects and delete the local keypair
+    in the .pem file that was created, and also invalidate the info-g019.txt
+
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+
+FRONTEND:
+= containes SearchBot.py, the main server source code, along with html templates
+- implementation details are in the report 'group019-csc326-2016'
+- enhancements include multi-word search and calculator...
+
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+
+BACKEND:
+= containes crawler.py and pagerank.py implementing those algorithms
+
+Test Case Setup:
+- Input url test-set is provided in 'urls.txt'
+- Build the database by crawling the urls via command 'python crawler.py'
+- To verify creation of database (.db) files, run command 'python db_test.py'
+
+Analysis of performance:
+- Due to enhanced frontend, multi-word searches take longer, proportional to the
+  number of words searched.
+  Latency has not reached a critical point for the user to feel inconvenienced,
+  although with large work load benchmarking significant drop in throughput
+  was observed.
+
